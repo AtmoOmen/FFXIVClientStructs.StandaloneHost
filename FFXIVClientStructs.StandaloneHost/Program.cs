@@ -7,6 +7,9 @@ namespace FFXIVClientStructs.StandaloneHost;
 public static class StandaloneHost
 {
     private static int initialized;
+    private static SigScanner? sigScanner;
+
+    public static SigScanner SigScanner => sigScanner ?? throw new InvalidOperationException("StandaloneHost has not been initialized in the target process.");
 
     public static void Initialize
     (
@@ -27,6 +30,7 @@ public static class StandaloneHost
         if (Interlocked.Exchange(ref initialized, 1) != 0)
             return;
 
+        sigScanner = new SigScanner(process.MainModule ?? throw new StandaloneHostException("The target process does not expose a main module."));
         Resolver.GetInstance.Setup();
         Addresses.Register();
         Resolver.GetInstance.Resolve();

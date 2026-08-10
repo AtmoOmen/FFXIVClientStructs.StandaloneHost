@@ -28,7 +28,8 @@ internal static partial class NativeMethods
 
     internal enum MemoryProtection : uint
     {
-        ReadWrite = 0x04
+        ReadWrite        = 0x04,
+        ExecuteReadWrite = 0x40
     }
 
     internal enum FreeType : uint
@@ -52,6 +53,28 @@ internal static partial class NativeMethods
         nuint             size,
         AllocationType    allocationType,
         MemoryProtection  protection
+    );
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool VirtualProtect
+    (
+        nint                address,
+        nuint               size,
+        MemoryProtection    newProtection,
+        out MemoryProtection oldProtection
+    );
+
+    [LibraryImport("kernel32.dll")]
+    internal static partial nint GetCurrentProcess();
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool FlushInstructionCache
+    (
+        nint process,
+        nint address,
+        nuint size
     );
 
     [LibraryImport("kernel32.dll", SetLastError = true)]

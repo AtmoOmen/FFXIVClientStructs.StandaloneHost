@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
@@ -14,6 +14,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="goatcorp.Reloaded.Hooks" Version="4.2.1"/>
+        <PackageReference Include="Iced" Version="1.17.0"/>
         <ProjectReference
             Include="..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj"
             ReferenceOutputAssembly="false"/>
