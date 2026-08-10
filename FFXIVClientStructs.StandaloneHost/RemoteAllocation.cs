@@ -72,4 +72,10 @@ internal sealed class RemoteAllocation : IDisposable
         if (!NativeMethods.VirtualFreeEx(process, Address, 0, NativeMethods.FreeType.Release))
             throw new StandaloneHostException($"VirtualFreeEx failed with {Marshal.GetLastPInvokeError()}.");
     }
+
+    public void TransferOwnership()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        disposed = true;
+    }
 }

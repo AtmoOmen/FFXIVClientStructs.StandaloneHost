@@ -69,7 +69,7 @@ public static unsafe class NativeBootstrap
             fixed (char* runtimeConfigPath = request.RuntimeConfigPath)
             {
                 var result = initialize(runtimeConfigPath, 0, &context);
-                if (result != 0 || context == 0)
+                if (result < 0 || context == 0)
                     throw new InvalidOperationException($"hostfxr initialization failed with 0x{result:X8}.");
             }
 
@@ -86,13 +86,13 @@ public static unsafe class NativeBootstrap
             var  loadAssembly = (delegate* unmanaged[Stdcall]<char*, char*, char*, char*, nint, nint*, int>)loadAssemblyAddress;
             nint entryPoint   = 0;
 
-            fixed (char* hostAssemblyPath = request.HostAssemblyPath)
-            fixed (char* typeName = "FFXIVClientStructs.StandaloneHost.TargetBootstrap, FFXIVClientStructs.StandaloneHost")
+            fixed (char* loaderAssemblyPath = request.LoaderAssemblyPath)
+            fixed (char* typeName = request.LoaderTypeName)
             fixed (char* methodName = "Run")
             {
                 var loadResult = loadAssembly
                 (
-                    hostAssemblyPath,
+                    loaderAssemblyPath,
                     typeName,
                     methodName,
                     (char*)-1,
@@ -121,21 +121,25 @@ public static unsafe class NativeBootstrap
         (
             string hostFXRPath,
             string runtimeConfigPath,
-            string hostAssemblyPath,
+            string loaderAssemblyPath,
+            string loaderTypeName,
             string errorPath
         )
         {
-            HostFXRPath       = hostFXRPath;
-            RuntimeConfigPath = runtimeConfigPath;
-            HostAssemblyPath  = hostAssemblyPath;
-            ErrorPath         = errorPath;
+            HostFXRPath        = hostFXRPath;
+            RuntimeConfigPath  = runtimeConfigPath;
+            LoaderAssemblyPath = loaderAssemblyPath;
+            LoaderTypeName     = loaderTypeName;
+            ErrorPath          = errorPath;
         }
 
         public string HostFXRPath { get; }
 
         public string RuntimeConfigPath { get; }
 
-        public string HostAssemblyPath { get; }
+        public string LoaderAssemblyPath { get; }
+
+        public string LoaderTypeName { get; }
 
         public string ErrorPath { get; }
 
@@ -144,15 +148,16 @@ public static unsafe class NativeBootstrap
             nint address
         )
         {
-            var cursor            = (char*)address;
-            var hostFXRPath       = ReadString(ref cursor);
-            var runtimeConfigPath = ReadString(ref cursor);
-            var hostAssemblyPath  = ReadString(ref cursor);
+            var cursor             = (char*)address;
+            var hostFXRPath        = ReadString(ref cursor);
+            var runtimeConfigPath  = ReadString(ref cursor);
+            var loaderAssemblyPath = ReadString(ref cursor);
+            var loaderTypeName     = ReadString(ref cursor);
             _ = ReadString(ref cursor);
             _ = ReadString(ref cursor);
             var errorPath = ReadString(ref cursor);
 
-            return new NativeRequest(hostFXRPath, runtimeConfigPath, hostAssemblyPath, errorPath);
+            return new NativeRequest(hostFXRPath, runtimeConfigPath, loaderAssemblyPath, loaderTypeName, errorPath);
         }
 
         private static string ReadString

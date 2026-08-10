@@ -31,6 +31,8 @@ public class MemoryPatch : IDisposable
 
         if (startEnabled)
             Enable();
+
+        StandaloneHost.RegisterResource(this);
     }
 
     public MemoryPatch
@@ -117,6 +119,7 @@ public class MemoryPatch : IDisposable
 
         Disable();
         IsDisposed = true;
+        StandaloneHost.UnregisterResource(this);
         GC.SuppressFinalize(this);
     }
 

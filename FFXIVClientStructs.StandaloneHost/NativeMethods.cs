@@ -7,6 +7,7 @@ internal static partial class NativeMethods
 {
     internal const uint INFINITE      = 0xFFFFFFFF;
     internal const uint WAIT_OBJECT_0 = 0;
+    internal const uint WAIT_TIMEOUT  = 0x00000102;
 
     [Flags]
     internal enum ProcessAccess : uint

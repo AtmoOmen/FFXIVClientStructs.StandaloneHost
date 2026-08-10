@@ -11,10 +11,21 @@ public static class TargetBootstrap
     )
     {
         BootstrapRequest? request = null;
+        TextWriter?       output = null;
+        TextWriter?       standardOutput = null;
+        TextWriter?       standardError = null;
 
         try
         {
             request = BootstrapRequest.Read(requestAddress);
+            output = new StreamWriter(request.OutputPath, false)
+            {
+                AutoFlush = true,
+            };
+            standardOutput = Console.Out;
+            standardError  = Console.Error;
+            Console.SetOut(output);
+            Console.SetError(output);
             return ManagedEntryRunner.Run(request);
         }
         catch (Exception exception)
@@ -32,6 +43,16 @@ public static class TargetBootstrap
             }
 
             return exception.HResult;
+        }
+        finally
+        {
+            if (standardOutput is not null)
+                Console.SetOut(standardOutput);
+
+            if (standardError is not null)
+                Console.SetError(standardError);
+
+            output?.Dispose();
         }
     }
 }

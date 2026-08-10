@@ -28,6 +28,8 @@ public sealed class Hook<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTy
 
         if (startEnabled)
             Enable();
+
+        StandaloneHost.RegisterResource(this);
     }
 
     public Hook
@@ -97,6 +99,7 @@ public sealed class Hook<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTy
 
         Disable();
         IsDisposed = true;
+        StandaloneHost.UnregisterResource(this);
         GC.SuppressFinalize(this);
     }
 }

@@ -11,13 +11,19 @@
         <Platforms>x64</Platforms>
         <BootstrapProject>$(MSBuildProjectDirectory)\..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj</BootstrapProject>
         <BootstrapPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)bootstrap\$(Configuration)\'))</BootstrapPublishDirectory>
+        <LoaderProject>$(MSBuildProjectDirectory)\..\FFXIVClientStructs.StandaloneHost.Loader\FFXIVClientStructs.StandaloneHost.Loader.csproj</LoaderProject>
+        <LoaderBuildDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)loader\$(Configuration)\'))</LoaderBuildDirectory>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="goatcorp.Reloaded.Hooks" Version="4.2.1"/>
+        <Compile Remove="BootstrapRequest.cs;ManagedEntryRunner.cs;TargetBootstrap.cs"/>
         <PackageReference Include="Iced" Version="1.17.0"/>
+        <PackageReference Include="goatcorp.Reloaded.Hooks" Version="4.2.1"/>
         <ProjectReference
             Include="..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj"
+            ReferenceOutputAssembly="false"/>
+        <ProjectReference
+            Include="..\FFXIVClientStructs.StandaloneHost.Loader\FFXIVClientStructs.StandaloneHost.Loader.csproj"
             ReferenceOutputAssembly="false"/>
         <ProjectReference Include="..\FFXIVClientStructs\FFXIVClientStructs\FFXIVClientStructs.csproj"/>
         <None Include="buildTransitive\FFXIVClientStructs.StandaloneHost.props" Pack="true" PackagePath="buildTransitive"/>
@@ -31,8 +37,22 @@
             Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishDir=$(BootstrapPublishDirectory)"/>
 
         <ItemGroup>
-            <EmbeddedResource Include="$(BootstrapPublishDirectory)FFXIVClientStructs.StandaloneHost.Bootstrap.dll">
-                <LogicalName>FFXIVClientStructs.StandaloneHost.Bootstrap.dll</LogicalName>
+            <EmbeddedResource Include="$(BootstrapPublishDirectory)FFXIVClientStructs.StandaloneHost.Bootstrap.Shim.dll">
+                <LogicalName>FFXIVClientStructs.StandaloneHost.Bootstrap.Shim.dll</LogicalName>
+            </EmbeddedResource>
+        </ItemGroup>
+    </Target>
+
+    <Target Name="BuildLoader" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+        <MSBuild
+            Projects="$(LoaderProject)"
+            Targets="Build"
+            BuildInParallel="false"
+            Properties="Configuration=$(Configuration);OutputPath=$(LoaderBuildDirectory);AppendTargetFrameworkToOutputPath=false"/>
+
+        <ItemGroup>
+            <EmbeddedResource Include="$(LoaderBuildDirectory)FFXIVClientStructs.StandaloneHost.Loader.V4.dll">
+                <LogicalName>FFXIVClientStructs.StandaloneHost.Loader.V4.dll</LogicalName>
             </EmbeddedResource>
         </ItemGroup>
     </Target>

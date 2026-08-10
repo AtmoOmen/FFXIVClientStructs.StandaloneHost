@@ -11,6 +11,12 @@
         <PublishAot>true</PublishAot>
         <NativeLib>Shared</NativeLib>
         <StripSymbols>true</StripSymbols>
+        <NativeShimName>FFXIVClientStructs.StandaloneHost.Bootstrap.Shim.dll</NativeShimName>
     </PropertyGroup>
+
+    <Target Name="CompileNativeShim" AfterTargets="Publish">
+        <Exec
+            Command="gcc -shared -O2 -static-libgcc -o &quot;$(PublishDir)$(NativeShimName)&quot; &quot;$(MSBuildProjectDirectory)\NativeBootstrap.c&quot;"/>
+    </Target>
 
 </Project>

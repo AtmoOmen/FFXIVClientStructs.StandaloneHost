@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
@@ -5,8 +6,17 @@ namespace FFXIVClientStructs.StandaloneHost;
 
 internal static class HostFXRLocator
 {
-    public static string Find()
+    public static string Find
+    (
+        Process targetProcess
+    )
     {
+        foreach (ProcessModule module in targetProcess.Modules)
+        {
+            if (string.Equals(module.ModuleName, "hostfxr.dll", StringComparison.OrdinalIgnoreCase))
+                return Path.GetFullPath(module.FileName);
+        }
+
         foreach (var root in GetRoots().Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var fxrDirectory = Path.Combine(root, "host", "fxr");

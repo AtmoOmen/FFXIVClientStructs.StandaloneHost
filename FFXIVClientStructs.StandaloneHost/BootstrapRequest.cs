@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace FFXIVClientStructs.StandaloneHost;
@@ -11,7 +12,9 @@ internal sealed class BootstrapRequest
         string   hostAssemblyPath,
         string   entryAssemblyPath,
         string[] arguments,
-        string   errorPath
+        string   errorPath,
+        string   outputPath,
+        nint     callerProcessHandle
     )
     {
         HostFXRPath       = hostFXRPath;
@@ -20,6 +23,8 @@ internal sealed class BootstrapRequest
         EntryAssemblyPath = entryAssemblyPath;
         Arguments         = arguments;
         ErrorPath         = errorPath;
+        OutputPath        = outputPath;
+        CallerProcessHandle = callerProcessHandle;
     }
 
     public string HostFXRPath { get; }
@@ -34,6 +39,10 @@ internal sealed class BootstrapRequest
 
     public string ErrorPath { get; }
 
+    public string OutputPath { get; }
+
+    public nint CallerProcessHandle { get; }
+
     public static unsafe BootstrapRequest Read
     (
         nint address
@@ -43,9 +52,16 @@ internal sealed class BootstrapRequest
         var hostFXRPath       = ReadString(ref cursor);
         var runtimeConfigPath = ReadString(ref cursor);
         var hostAssemblyPath  = ReadString(ref cursor);
+        _ = ReadString(ref cursor);
         var entryAssemblyPath = ReadString(ref cursor);
         var arguments         = JsonSerializer.Deserialize<string[]>(ReadString(ref cursor)) ?? [];
         var errorPath         = ReadString(ref cursor);
+        var outputPath        = ReadString(ref cursor);
+        _ = ReadString(ref cursor);
+        var callerProcessHandle = unchecked
+        (
+            (nint)nuint.Parse(ReadString(ref cursor), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture)
+        );
 
         return new BootstrapRequest
         (
@@ -54,7 +70,9 @@ internal sealed class BootstrapRequest
             hostAssemblyPath,
             entryAssemblyPath,
             arguments,
-            errorPath
+            errorPath,
+            outputPath,
+            callerProcessHandle
         );
     }
 

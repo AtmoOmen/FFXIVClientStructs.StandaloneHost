@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -9,57 +11,80 @@ internal sealed class HostArtifacts
     private HostArtifacts
     (
         string bootstrapPath,
+        string loaderAssemblyPath,
+        string runtimeConfigPath,
         string errorPath,
+        string outputPath,
         byte[] request
     )
     {
-        BootstrapPath = bootstrapPath;
-        ErrorPath     = errorPath;
-        Request       = request;
+        BootstrapPath      = bootstrapPath;
+        LoaderAssemblyPath = loaderAssemblyPath;
+        RuntimeConfigPath  = runtimeConfigPath;
+        ErrorPath          = errorPath;
+        OutputPath         = outputPath;
+        Request            = request;
     }
 
     public string BootstrapPath { get; }
 
+    public string LoaderAssemblyPath { get; }
+
+    public string RuntimeConfigPath { get; }
+
     public string ErrorPath { get; }
+
+    public string OutputPath { get; }
 
     public byte[] Request { get; }
 
     public static HostArtifacts Create
     (
-        int targetProcessId
+        Process targetProcess
     )
     {
         var entryAssembly     = Assembly.GetEntryAssembly() ?? throw new StandaloneHostException("The calling application does not expose an entry assembly.");
-        var hostAssemblyPath  = ResolveAssemblyPath(typeof(StandaloneHost).Assembly);
         var entryAssemblyPath = ResolveAssemblyPath(entryAssembly);
-        var runtimeConfigPath = RuntimeConfigExtractor.Extract();
-
-        var errorDirectory = Path.Combine
+        var rootDirectory = Path.Combine
         (
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FFXIVClientStructs.StandaloneHost",
-            "errors"
+            "FFXIVClientStructs.StandaloneHost"
         );
+        var errorDirectory = Path.Combine(rootDirectory, "errors");
         Directory.CreateDirectory(errorDirectory);
-        var errorPath = Path.Combine(errorDirectory, $"{Environment.ProcessId}-{targetProcessId}-{Guid.NewGuid():N}.log");
+        var operationName = $"{Environment.ProcessId}-{targetProcess.Id}-{Guid.NewGuid():N}";
+        var operationDirectory = Path.Combine(rootDirectory, "operations", operationName);
+        var errorPath           = Path.Combine(errorDirectory, $"{operationName}.log");
+        var outputPath          = Path.Combine(errorDirectory, $"{operationName}.output");
 
-        var bootstrapPath = BootstrapExtractor.Extract();
-        var hostFXRPath   = HostFXRLocator.Find();
-        var arguments     = JsonSerializer.Serialize(Environment.GetCommandLineArgs()[1..]);
+        var bootstrapPath      = BootstrapExtractor.Extract(BootstrapExtractor.NATIVE_RESOURCE_NAME, operationDirectory);
+        var loaderAssemblyPath = BootstrapExtractor.Extract(BootstrapExtractor.LOADER_RESOURCE_NAME, operationDirectory);
+        var loaderAssemblyName = AssemblyName.GetAssemblyName(loaderAssemblyPath).Name ??
+                                 throw new StandaloneHostException("The loader assembly does not expose a name.");
+        var runtimeConfigPath  = RuntimeConfigExtractor.Extract(operationDirectory);
+        var hostFXRPath        = HostFXRLocator.Find(targetProcess);
+        var arguments          = JsonSerializer.Serialize(Environment.GetCommandLineArgs()[1..]);
         var request = BuildRequest
         (
             hostFXRPath,
             runtimeConfigPath,
-            hostAssemblyPath,
+            loaderAssemblyPath,
+            $"FFXIVClientStructs.StandaloneHost.TargetBootstrap, {loaderAssemblyName}",
             entryAssemblyPath,
             arguments,
-            errorPath
+            errorPath,
+            outputPath,
+            Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
+            "0000000000000000"
         );
 
         return new HostArtifacts
         (
             bootstrapPath,
+            loaderAssemblyPath,
+            runtimeConfigPath,
             errorPath,
+            outputPath,
             request
         );
     }

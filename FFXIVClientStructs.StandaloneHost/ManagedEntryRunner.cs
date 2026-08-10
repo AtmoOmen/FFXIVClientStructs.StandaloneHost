@@ -1,6 +1,5 @@
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
+using Microsoft.Win32.SafeHandles;
 
 namespace FFXIVClientStructs.StandaloneHost;
 
@@ -11,65 +10,94 @@ internal static class ManagedEntryRunner
         BootstrapRequest request
     )
     {
-        var context  = AssemblyLoadContext.Default;
-        var resolver = new AssemblyDependencyResolver(request.EntryAssemblyPath);
-        context.Resolving             += ResolveAssembly;
-        context.ResolvingUnmanagedDll += ResolveUnmanagedDLL;
+        var context = new EntryLoadContext(request.EntryAssemblyPath);
+        using var callerProcess = new EventWaitHandle(false, EventResetMode.ManualReset);
+        callerProcess.SafeWaitHandle = new SafeWaitHandle(request.CallerProcessHandle, ownsHandle: false);
+        using var monitorCancellation = new CancellationTokenSource();
+        var monitor = MonitorCallerProcess(callerProcess, context, monitorCancellation.Token);
 
         try
         {
-            var assembly   = context.LoadFromAssemblyPath(request.EntryAssemblyPath);
+            var assembly   = context.LoadEntryAssembly();
             var entryPoint = assembly.EntryPoint ?? throw new InvalidOperationException("The entry assembly does not define an entry point.");
+            if (callerProcess.WaitOne(0))
+                return 0;
 
             var parameters = entryPoint.GetParameters().Length == 0 ?
                                  null :
                                  new object?[] { request.Arguments };
             var result = entryPoint.Invoke(null, parameters);
 
+            int exitCode;
             if (result is Task<int> resultTask)
             {
                 resultTask.Wait();
-                return resultTask.Result;
+                exitCode = resultTask.Result;
             }
-
-            if (result is Task task)
+            else if (result is Task task)
             {
                 task.Wait();
-                return 0;
+                exitCode = 0;
+            }
+            else
+            {
+                exitCode = result is int value ? value : 0;
             }
 
-            return result is int exitCode ?
-                       exitCode :
-                       0;
+            monitor.Wait();
+            return exitCode;
         }
         finally
         {
-            context.Resolving             -= ResolveAssembly;
-            context.ResolvingUnmanagedDll -= ResolveUnmanagedDLL;
+            try
+            {
+                monitorCancellation.Cancel();
+                monitor.Wait();
+            }
+            finally
+            {
+                try
+                {
+                    context.ReleaseResources();
+                }
+                finally
+                {
+                    context.Unload();
+                }
+            }
         }
+    }
 
-        Assembly? ResolveAssembly
+    private static async Task MonitorCallerProcess
+    (
+        WaitHandle        callerProcess,
+        EntryLoadContext  context,
+        CancellationToken cancellationToken
+    )
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var registeredWait = ThreadPool.RegisterWaitForSingleObject
         (
-            AssemblyLoadContext loadContext,
-            AssemblyName        assemblyName
-        )
+            callerProcess,
+            static (state, _) => ((TaskCompletionSource<bool>)state!).TrySetResult(true),
+            completion,
+            Timeout.Infinite,
+            executeOnlyOnce: true
+        );
+        using var cancellationRegistration = cancellationToken.Register
+        (
+            static state => ((TaskCompletionSource<bool>)state!).TrySetResult(false),
+            completion
+        );
+
+        try
         {
-            var path = resolver.ResolveAssemblyToPath(assemblyName) ?? Path.Combine(Path.GetDirectoryName(request.EntryAssemblyPath)!, $"{assemblyName.Name}.dll");
-            return File.Exists(path) ?
-                       loadContext.LoadFromAssemblyPath(path) :
-                       null;
+            if (await completion.Task)
+                context.ReleaseResources();
         }
-
-        nint ResolveUnmanagedDLL
-        (
-            Assembly assembly,
-            string   libraryName
-        )
+        finally
         {
-            var path = resolver.ResolveUnmanagedDllToPath(libraryName);
-            return path is null ?
-                       0 :
-                       NativeLibrary.Load(path, assembly, null);
+            registeredWait.Unregister(null);
         }
     }
 }

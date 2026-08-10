@@ -4,26 +4,32 @@ namespace FFXIVClientStructs.StandaloneHost;
 
 internal static class BootstrapExtractor
 {
-    private const string RESOURCE_NAME = "FFXIVClientStructs.StandaloneHost.Bootstrap.dll";
+    public const string NATIVE_RESOURCE_NAME = "FFXIVClientStructs.StandaloneHost.Bootstrap.Shim.dll";
 
-    public static string Extract()
+    public const string LOADER_RESOURCE_NAME = "FFXIVClientStructs.StandaloneHost.Loader.V4.dll";
+
+    public static string Extract
+    (
+        string  resourceName,
+        string? destinationDirectory = null
+    )
     {
         var assembly = typeof(BootstrapExtractor).Assembly;
         using var stream = assembly.GetManifestResourceStream
-                               (RESOURCE_NAME) ??
-                           throw new StandaloneHostException($"Embedded resource {RESOURCE_NAME} was not found.");
+                               (resourceName) ??
+                           throw new StandaloneHostException($"Embedded resource {resourceName} was not found.");
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         var content     = memory.ToArray();
         var contentHash = SHA256.HashData(content);
         var hash        = Convert.ToHexString(contentHash);
-        var directory = Path.Combine
-        (
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FFXIVClientStructs.StandaloneHost",
-            hash
-        );
-        var path = Path.Combine(directory, RESOURCE_NAME);
+        var directory = destinationDirectory ?? Path.Combine
+                            (
+                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                "FFXIVClientStructs.StandaloneHost",
+                                hash
+                            );
+        var path = Path.Combine(directory, resourceName);
 
         Directory.CreateDirectory(directory);
 
