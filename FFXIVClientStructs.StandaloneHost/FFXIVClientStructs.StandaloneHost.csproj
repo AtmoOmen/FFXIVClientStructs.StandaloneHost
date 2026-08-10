@@ -2,13 +2,6 @@
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
-        <LangVersion>14</LangVersion>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PlatformTarget>x64</PlatformTarget>
-        <Platforms>x64</Platforms>
         <BootstrapProject>$(MSBuildProjectDirectory)\..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj</BootstrapProject>
         <BootstrapPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)bootstrap\$(Configuration)\'))</BootstrapPublishDirectory>
         <LoaderProject>$(MSBuildProjectDirectory)\..\FFXIVClientStructs.StandaloneHost.Loader\FFXIVClientStructs.StandaloneHost.Loader.csproj</LoaderProject>

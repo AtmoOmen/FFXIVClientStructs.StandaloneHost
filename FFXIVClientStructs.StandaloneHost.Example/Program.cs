@@ -21,7 +21,7 @@ internal static class Program
         if (process is null)
             return;
 
-        StandaloneHost.Initialize(process);
+        StandaloneHost.Init(process);
         
         var uiState = UIState.Instance();
         var instanceID = uiState->PublicInstance.InstanceId;
@@ -30,6 +30,9 @@ internal static class Program
         Console.WriteLine($"Instance ID: {instanceID}");
         Console.WriteLine($"Zone Server ID: {zoneServerID}");
 
+        Console.WriteLine("正在清理资源...");
+        StandaloneHost.Uninit();
+        Console.WriteLine("清理资源完成，再见");
     }
 
     private static Process? SelectProcess()
@@ -39,14 +42,14 @@ internal static class Program
             return Process.GetProcessById(currentProcess.Id);
 
         var processes = Process.GetProcessesByName(GAME_PROCESS_NAME).OrderBy(process => process.Id).ToArray();
-        if (processes.Length == 0)
+        switch (processes.Length)
         {
-            Console.WriteLine($"No {GAME_PROCESS_NAME}.exe process was found.");
-            return null;
+            case 0:
+                Console.WriteLine($"No {GAME_PROCESS_NAME}.exe process was found.");
+                return null;
+            case 1:
+                return processes[0];
         }
-
-        if (processes.Length == 1)
-            return processes[0];
 
         Console.WriteLine($"Multiple {GAME_PROCESS_NAME}.exe processes were found.");
         for (var index = 0; index < processes.Length; index++)
