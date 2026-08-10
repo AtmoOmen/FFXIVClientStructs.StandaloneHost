@@ -28,8 +28,8 @@ internal sealed class EntryLoadContext : AssemblyLoadContext
         (assembly => string.Equals(assembly.GetName().Name, "FFXIVClientStructs.StandaloneHost", StringComparison.Ordinal)
         );
         var hostType = hostAssembly?.GetType("FFXIVClientStructs.StandaloneHost.StandaloneHost");
-        var shutdown = hostType?.GetMethod("Shutdown", BindingFlags.Public | BindingFlags.Static);
-        shutdown?.Invoke(null, null);
+        var uninit = hostType?.GetMethod("Uninit", BindingFlags.Public | BindingFlags.Static);
+        uninit?.Invoke(null, null);
     }
 
     protected override Assembly? Load

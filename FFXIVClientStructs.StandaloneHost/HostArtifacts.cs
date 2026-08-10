@@ -15,6 +15,7 @@ internal sealed class HostArtifacts
         string runtimeConfigPath,
         string errorPath,
         string outputPath,
+        string pipeName,
         byte[] request
     )
     {
@@ -23,6 +24,7 @@ internal sealed class HostArtifacts
         RuntimeConfigPath  = runtimeConfigPath;
         ErrorPath          = errorPath;
         OutputPath         = outputPath;
+        PipeName           = pipeName;
         Request            = request;
     }
 
@@ -35,6 +37,8 @@ internal sealed class HostArtifacts
     public string ErrorPath { get; }
 
     public string OutputPath { get; }
+
+    public string PipeName { get; }
 
     public byte[] Request { get; }
 
@@ -56,6 +60,7 @@ internal sealed class HostArtifacts
         var operationDirectory = Path.Combine(rootDirectory,  "operations", operationName);
         var errorPath          = Path.Combine(errorDirectory, $"{operationName}.log");
         var outputPath         = Path.Combine(errorDirectory, $"{operationName}.output");
+        var pipeName           = $"FFXIVClientStructs.StandaloneHost.{operationName}";
 
         var bootstrapPath      = BootstrapExtractor.Extract(BootstrapExtractor.NATIVE_RESOURCE_NAME, operationDirectory);
         var loaderAssemblyPath = BootstrapExtractor.Extract(BootstrapExtractor.LOADER_RESOURCE_NAME, operationDirectory);
@@ -75,7 +80,8 @@ internal sealed class HostArtifacts
             errorPath,
             outputPath,
             Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
-            "0000000000000000"
+            "0000000000000000",
+            pipeName
         );
 
         return new HostArtifacts
@@ -85,6 +91,7 @@ internal sealed class HostArtifacts
             runtimeConfigPath,
             errorPath,
             outputPath,
+            pipeName,
             request
         );
     }

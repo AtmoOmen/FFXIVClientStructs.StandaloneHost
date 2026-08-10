@@ -8,9 +8,10 @@ namespace FFXIVClientStructs.StandaloneHost;
 
 public static class StandaloneHost
 {
-    private static int         initialized;
-    private static int         shuttingDown;
-    private static SigScanner? sigScanner;
+    private static int            initialized;
+    private static int            shuttingDown;
+    private static SigScanner?    sigScanner;
+    private static RemoteSession? remoteSession;
 
     private static readonly ConcurrentDictionary<IDisposable, byte> Resources = new(ReferenceEqualityComparer.Instance);
 
@@ -27,28 +28,78 @@ public static class StandaloneHost
         if (process.HasExited)
             throw new ArgumentException("The target process has exited.", nameof(process));
 
-        if (process.Id != Environment.ProcessId)
-        {
-            var exitCode = HostInjector.InjectAndRun(process);
-            Environment.Exit(exitCode);
-        }
-
         if (Volatile.Read(ref shuttingDown) != 0)
             throw new OperationCanceledException("The StandaloneHost lifetime has ended.");
 
-        if (Interlocked.Exchange(ref initialized, 1) != 0)
+        if (Interlocked.CompareExchange(ref initialized, 1, 0) != 0)
             return;
 
-        sigScanner = new SigScanner(process.MainModule ?? throw new StandaloneHostException("The target process does not expose a main module."));
-        Resolver.GetInstance.Setup();
-        Addresses.Register();
-        Resolver.GetInstance.Resolve();
+        try
+        {
+            if (process.Id != Environment.ProcessId)
+            {
+                remoteSession = HostInjector.Start(process);
+                return;
+            }
+
+            sigScanner = new SigScanner(process.MainModule ?? throw new StandaloneHostException("The target process does not expose a main module."));
+            Resolver.GetInstance.Setup();
+            Addresses.Register();
+            Resolver.GetInstance.Resolve();
+        }
+        catch
+        {
+            Volatile.Write(ref initialized, 0);
+            throw;
+        }
+    }
+
+    public static TContract CreateModule<TContract, TModule>()
+        where TContract : class
+        where TModule : class, TContract
+    {
+        if (!typeof(TContract).IsInterface)
+            throw new ArgumentException($"Remote module contract {typeof(TContract)} must be an interface.");
+        if (!typeof(TContract).IsVisible)
+            throw new ArgumentException($"Remote module contract {typeof(TContract)} must be public.");
+        if (Volatile.Read(ref shuttingDown) != 0)
+            throw new OperationCanceledException("The StandaloneHost lifetime has ended.");
+
+        var session = remoteSession ??
+                      throw new InvalidOperationException("StandaloneHost has not been initialized for a remote process.");
+        var moduleID = Guid.NewGuid();
+        session.CreateModule(moduleID, typeof(TContract), typeof(TModule));
+
+        try
+        {
+            return RemoteModuleProxy<TContract>.Create(session, moduleID);
+        }
+        catch (Exception exception)
+        {
+            try
+            {
+                session.DisposeModule(moduleID);
+            }
+            catch (Exception cleanupException)
+            {
+                throw new AggregateException(exception, cleanupException);
+            }
+
+            throw;
+        }
     }
 
     public static void Uninit()
     {
         if (Interlocked.Exchange(ref shuttingDown, 1) != 0)
             return;
+
+        var session = Interlocked.Exchange(ref remoteSession, null);
+        if (session is not null)
+        {
+            session.Dispose();
+            return;
+        }
 
         List<Exception>? exceptions = null;
 

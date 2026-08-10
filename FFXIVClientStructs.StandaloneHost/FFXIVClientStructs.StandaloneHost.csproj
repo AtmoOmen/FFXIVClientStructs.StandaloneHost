@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Remove="BootstrapRequest.cs;ManagedEntryRunner.cs;TargetBootstrap.cs"/>
+        <Compile Remove="BootstrapRequest.cs;ManagedEntryRunner.cs;RemoteServer.cs;TargetBootstrap.cs"/>
         <PackageReference Include="Iced" Version="1.17.0"/>
         <PackageReference Include="goatcorp.Reloaded.Hooks" Version="4.2.1"/>
         <ProjectReference

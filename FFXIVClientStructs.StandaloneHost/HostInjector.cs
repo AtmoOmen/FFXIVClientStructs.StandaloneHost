@@ -11,7 +11,7 @@ internal static class HostInjector
     private const ushort IMAGE_FILE_MACHINE_UNKNOWN = 0;
     private const ushort IMAGE_FILE_MACHINE_AMD64   = 0x8664;
 
-    public static int InjectAndRun
+    public static RemoteSession Start
     (
         Process targetProcess
     )
@@ -20,7 +20,7 @@ internal static class HostInjector
             throw new StandaloneHostException("The calling application must run as x64.");
 
         var artifacts = HostArtifacts.Create(targetProcess);
-        using var process = NativeMethods.OpenProcess
+        var process = NativeMethods.OpenProcess
         (
             NativeMethods.ProcessAccess.CreateThread           |
             NativeMethods.ProcessAccess.QueryInformation       |
@@ -32,65 +32,50 @@ internal static class HostInjector
             targetProcess.Id
         );
         if (process.IsInvalid)
+        {
+            process.Dispose();
             throw new StandaloneHostException($"OpenProcess failed with {Marshal.GetLastPInvokeError()}.");
+        }
 
-        ValidateArchitecture(process);
-        LoadBootstrap(process, targetProcess, artifacts.BootstrapPath);
-
-        var bootstrapBase = FindModuleBase(targetProcess.Id, artifacts.BootstrapPath);
-        var bootstrapRVA  = PortableExecutable.GetExportRVA(artifacts.BootstrapPath, BOOTSTRAP_EXPORT_NAME);
+        var            bootstrapLoaded = false;
+        RemoteSession? session = null;
 
         try
         {
+            ValidateArchitecture(process);
+            LoadBootstrap(process, targetProcess, artifacts.BootstrapPath);
+            bootstrapLoaded = true;
+
+            var bootstrapBase = FindModuleBase(targetProcess.Id, artifacts.BootstrapPath);
+            var bootstrapRVA  = PortableExecutable.GetExportRVA(artifacts.BootstrapPath, BOOTSTRAP_EXPORT_NAME);
             using var request = RemoteAllocation.Allocate(process, (nuint)artifacts.Request.Length);
             request.Write(artifacts.Request);
-
-            var exitCode = RunBootstrapThread
-            (
-                process,
-                bootstrapBase + bootstrapRVA,
-                request,
-                artifacts.OutputPath
-            );
-
-            var error = File.Exists(artifacts.ErrorPath) ?
-                            File.ReadAllText(artifacts.ErrorPath) :
-                            string.Empty;
-            if (!string.IsNullOrWhiteSpace(error))
-                throw new StandaloneHostException(error);
-
-            if ((exitCode & 0x80000000) != 0)
-                throw new StandaloneHostException($"The target bootstrap failed with 0x{exitCode:X8}.");
-
-            return unchecked((int)exitCode);
+            var thread = StartBootstrapThread(process, bootstrapBase + bootstrapRVA, request);
+            request.TransferOwnership();
+            session = new RemoteSession(process, thread, artifacts);
+            session.WaitUntilReady();
+            return session;
         }
-        finally
+        catch (Exception exception)
         {
+            List<Exception>? cleanupExceptions = null;
+
             try
             {
-                if (File.Exists(artifacts.OutputPath))
-                    File.Delete(artifacts.OutputPath);
+                if (session is not null)
+                    session.Dispose();
+                else if (bootstrapLoaded)
+                    UnloadBootstrap(process, targetProcess, artifacts.BootstrapPath);
             }
-            finally
+            catch (Exception cleanupException)
             {
+                cleanupExceptions = [cleanupException];
+            }
+
+            if (session is null)
+            {
+                process.Dispose();
                 try
-                {
-                    var freeLibrary = GetRemoteProcedureAddress(targetProcess, "kernel32.dll", "FreeLibrary");
-
-                    for (var attempt = 0; attempt < 16; attempt++)
-                    {
-                        if (!TryFindModuleBase(targetProcess.Id, artifacts.BootstrapPath, out var loadedBootstrapBase))
-                            break;
-
-                        var freeResult = RunRemoteThread(process, freeLibrary, loadedBootstrapBase);
-                        if (freeResult == 0)
-                            throw new StandaloneHostException("FreeLibrary failed for the target bootstrap.");
-                    }
-
-                    if (TryFindModuleBase(targetProcess.Id, artifacts.BootstrapPath, out _))
-                        throw new StandaloneHostException("The target bootstrap remained loaded after cleanup.");
-                }
-                finally
                 {
                     DeleteArtifacts
                     (
@@ -99,7 +84,20 @@ internal static class HostInjector
                         artifacts.RuntimeConfigPath
                     );
                 }
+                catch (Exception cleanupException)
+                {
+                    cleanupExceptions ??= [];
+                    cleanupExceptions.Add(cleanupException);
+                }
             }
+
+            if (cleanupExceptions is not null)
+            {
+                cleanupExceptions.Insert(0, exception);
+                throw new AggregateException(cleanupExceptions);
+            }
+
+            throw;
         }
     }
 
@@ -127,7 +125,29 @@ internal static class HostInjector
         remotePath.Write(path);
 
         var loadLibrary = GetRemoteProcedureAddress(targetProcess, "kernel32.dll", "LoadLibraryW");
-        _ = RunRemoteThread(process, loadLibrary, remotePath.Address);
+        if (RunRemoteThread(process, loadLibrary, remotePath.Address) == 0)
+            throw new StandaloneHostException("LoadLibraryW failed for the target bootstrap.");
+    }
+
+    private static void UnloadBootstrap
+    (
+        SafeProcessHandle process,
+        Process           targetProcess,
+        string            bootstrapPath
+    )
+    {
+        var freeLibrary = GetRemoteProcedureAddress(targetProcess, "kernel32.dll", "FreeLibrary");
+
+        for (var attempt = 0; attempt < 16; attempt++)
+        {
+            if (!TryFindModuleBase(targetProcess.Id, bootstrapPath, out var bootstrapBase))
+                return;
+
+            if (RunRemoteThread(process, freeLibrary, bootstrapBase) == 0)
+                throw new StandaloneHostException("FreeLibrary failed for the target bootstrap.");
+        }
+
+        throw new StandaloneHostException("The target bootstrap remained loaded after cleanup.");
     }
 
     private static nint GetRemoteProcedureAddress
@@ -219,70 +239,24 @@ internal static class HostInjector
         return exitCode;
     }
 
-    private static uint RunBootstrapThread
+    private static SafeWaitHandle StartBootstrapThread
     (
         SafeProcessHandle process,
         nint              startAddress,
-        RemoteAllocation  request,
-        string            outputPath
+        RemoteAllocation  request
     )
     {
-        using var thread = NativeMethods.CreateRemoteThread(process, 0, 0, startAddress, request.Address, 0, 0);
+        var thread = NativeMethods.CreateRemoteThread(process, 0, 0, startAddress, request.Address, 0, 0);
         if (thread.IsInvalid)
+        {
+            thread.Dispose();
             throw new StandaloneHostException($"CreateRemoteThread failed with {Marshal.GetLastPInvokeError()}.");
-
-        request.TransferOwnership();
-        StreamReader? output = null;
-
-        try
-        {
-            while (true)
-            {
-                if (output is null && File.Exists(outputPath))
-                {
-                    var stream = new FileStream
-                    (
-                        outputPath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite | FileShare.Delete
-                    );
-                    output = new StreamReader(stream, Encoding.UTF8);
-                }
-
-                if (output is not null)
-                {
-                    var text = output.ReadToEnd();
-                    if (!string.IsNullOrEmpty(text))
-                        Console.Write(text);
-                }
-
-                var waitResult = NativeMethods.WaitForSingleObject(thread, 25);
-                if (waitResult == NativeMethods.WAIT_OBJECT_0)
-                    break;
-                if (waitResult != NativeMethods.WAIT_TIMEOUT)
-                    throw new StandaloneHostException($"WaitForSingleObject failed with result 0x{waitResult:X8}.");
-            }
-
-            if (output is not null)
-            {
-                var text = output.ReadToEnd();
-                if (!string.IsNullOrEmpty(text))
-                    Console.Write(text);
-            }
-        }
-        finally
-        {
-            output?.Dispose();
         }
 
-        if (!NativeMethods.GetExitCodeThread(thread, out var exitCode))
-            throw new StandaloneHostException($"GetExitCodeThread failed with {Marshal.GetLastPInvokeError()}.");
-
-        return exitCode;
+        return thread;
     }
 
-    private static void DeleteArtifacts
+    internal static void DeleteArtifacts
     (
         params ReadOnlySpan<string> paths
     )

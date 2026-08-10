@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 
 namespace FFXIVClientStructs.StandaloneHost;
 
@@ -11,20 +10,22 @@ internal sealed class BootstrapRequest
         string   runtimeConfigPath,
         string   hostAssemblyPath,
         string   entryAssemblyPath,
-        string[] arguments,
         string   errorPath,
         string   outputPath,
-        nint     callerProcessHandle
+        int      callerProcessID,
+        nint     callerProcessHandle,
+        string   pipeName
     )
     {
         HostFXRPath         = hostFXRPath;
         RuntimeConfigPath   = runtimeConfigPath;
         HostAssemblyPath    = hostAssemblyPath;
         EntryAssemblyPath   = entryAssemblyPath;
-        Arguments           = arguments;
         ErrorPath           = errorPath;
         OutputPath          = outputPath;
+        CallerProcessID     = callerProcessID;
         CallerProcessHandle = callerProcessHandle;
+        PipeName            = pipeName;
     }
 
     public string HostFXRPath { get; }
@@ -35,13 +36,15 @@ internal sealed class BootstrapRequest
 
     public string EntryAssemblyPath { get; }
 
-    public string[] Arguments { get; }
-
     public string ErrorPath { get; }
 
     public string OutputPath { get; }
 
+    public int CallerProcessID { get; }
+
     public nint CallerProcessHandle { get; }
+
+    public string PipeName { get; }
 
     public static unsafe BootstrapRequest Read
     (
@@ -54,14 +57,20 @@ internal sealed class BootstrapRequest
         var hostAssemblyPath  = ReadString(ref cursor);
         _ = ReadString(ref cursor);
         var entryAssemblyPath = ReadString(ref cursor);
-        var arguments         = JsonSerializer.Deserialize<string[]>(ReadString(ref cursor)) ?? [];
+        _ = ReadString(ref cursor);
         var errorPath         = ReadString(ref cursor);
         var outputPath        = ReadString(ref cursor);
-        _ = ReadString(ref cursor);
+        var callerProcessID = int.Parse
+        (
+            ReadString(ref cursor),
+            NumberStyles.None,
+            CultureInfo.InvariantCulture
+        );
         var callerProcessHandle = unchecked
         (
             (nint)nuint.Parse(ReadString(ref cursor), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture)
         );
+        var pipeName = ReadString(ref cursor);
 
         return new BootstrapRequest
         (
@@ -69,10 +78,11 @@ internal sealed class BootstrapRequest
             runtimeConfigPath,
             hostAssemblyPath,
             entryAssemblyPath,
-            arguments,
             errorPath,
             outputPath,
-            callerProcessHandle
+            callerProcessID,
+            callerProcessHandle,
+            pipeName
         );
     }
 

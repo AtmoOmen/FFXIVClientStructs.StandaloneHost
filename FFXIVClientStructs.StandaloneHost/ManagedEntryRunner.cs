@@ -1,4 +1,5 @@
-using Microsoft.Win32.SafeHandles;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace FFXIVClientStructs.StandaloneHost;
 
@@ -9,95 +10,33 @@ internal static class ManagedEntryRunner
         BootstrapRequest request
     )
     {
-        var       context       = new EntryLoadContext(request.EntryAssemblyPath);
-        using var callerProcess = new EventWaitHandle(false, EventResetMode.ManualReset);
-        callerProcess.SafeWaitHandle = new SafeWaitHandle(request.CallerProcessHandle, false);
-        using var monitorCancellation = new CancellationTokenSource();
-        var       monitor             = MonitorCallerProcess(callerProcess, context, monitorCancellation.Token);
+        var context = new EntryLoadContext(request.EntryAssemblyPath);
 
         try
         {
-            var assembly   = context.LoadEntryAssembly();
-            var entryPoint = assembly.EntryPoint ?? throw new InvalidOperationException("The entry assembly does not define an entry point.");
-            if (callerProcess.WaitOne(0))
-                return 0;
+            _ = context.LoadEntryAssembly();
+            var hostAssembly = context.LoadFromAssemblyName(new AssemblyName("FFXIVClientStructs.StandaloneHost"));
+            var hostType = hostAssembly.GetType("FFXIVClientStructs.StandaloneHost.StandaloneHost", true) ??
+                           throw new TypeLoadException("StandaloneHost was not found in the target load context.");
+            var init = hostType.GetMethod("Init", BindingFlags.Public | BindingFlags.Static) ??
+                       throw new MissingMethodException(hostType.FullName, "Init");
+            using var targetProcess = Process.GetCurrentProcess();
+            init.Invoke(null, [targetProcess]);
 
-            var parameters = entryPoint.GetParameters().Length == 0 ?
-                                 null :
-                                 new object?[] { request.Arguments };
-            var result = entryPoint.Invoke(null, parameters);
-
-            int exitCode;
-
-            if (result is Task<int> resultTask)
-            {
-                resultTask.Wait();
-                exitCode = resultTask.Result;
-            }
-            else if (result is Task task)
-            {
-                task.Wait();
-                exitCode = 0;
-            }
-            else
-                exitCode = result is int value ?
-                               value :
-                               0;
-
-            monitor.Wait();
-            return exitCode;
+            using var callerProcess = Process.GetProcessById(request.CallerProcessID);
+            var       server        = new RemoteServer(context, request.PipeName);
+            return server.Run(callerProcess);
         }
         finally
         {
             try
             {
-                monitorCancellation.Cancel();
-                monitor.Wait();
+                context.ReleaseResources();
             }
             finally
             {
-                try
-                {
-                    context.ReleaseResources();
-                }
-                finally
-                {
-                    context.Unload();
-                }
+                context.Unload();
             }
-        }
-    }
-
-    private static async Task MonitorCallerProcess
-    (
-        WaitHandle        callerProcess,
-        EntryLoadContext  context,
-        CancellationToken cancellationToken
-    )
-    {
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var registeredWait = ThreadPool.RegisterWaitForSingleObject
-        (
-            callerProcess,
-            static (state, _) => ((TaskCompletionSource<bool>)state!).TrySetResult(true),
-            completion,
-            Timeout.Infinite,
-            true
-        );
-        using var cancellationRegistration = cancellationToken.Register
-        (
-            static state => ((TaskCompletionSource<bool>)state!).TrySetResult(false),
-            completion
-        );
-
-        try
-        {
-            if (await completion.Task)
-                context.ReleaseResources();
-        }
-        finally
-        {
-            registeredWait.Unregister(null);
         }
     }
 }

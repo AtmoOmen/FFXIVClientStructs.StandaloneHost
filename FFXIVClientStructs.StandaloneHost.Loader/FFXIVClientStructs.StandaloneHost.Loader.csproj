@@ -7,6 +7,8 @@
     <ItemGroup>
         <Compile Include="..\FFXIVClientStructs.StandaloneHost\BootstrapRequest.cs" Link="BootstrapRequest.cs"/>
         <Compile Include="..\FFXIVClientStructs.StandaloneHost\ManagedEntryRunner.cs" Link="ManagedEntryRunner.cs"/>
+        <Compile Include="..\FFXIVClientStructs.StandaloneHost\RemoteProtocol.cs" Link="RemoteProtocol.cs"/>
+        <Compile Include="..\FFXIVClientStructs.StandaloneHost\RemoteServer.cs" Link="RemoteServer.cs"/>
         <Compile Include="..\FFXIVClientStructs.StandaloneHost\TargetBootstrap.cs" Link="TargetBootstrap.cs"/>
     </ItemGroup>
 
