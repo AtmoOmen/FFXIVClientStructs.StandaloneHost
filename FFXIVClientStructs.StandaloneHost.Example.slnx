@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="FFXIVClientStructs.StandaloneHost.Example/FFXIVClientStructs.StandaloneHost.Example.csproj" />
+  <Project Path="FFXIVClientStructs.StandaloneHost/FFXIVClientStructs.StandaloneHost.csproj">
+    <Platform Project="x64" />
+  </Project>
 </Solution>
