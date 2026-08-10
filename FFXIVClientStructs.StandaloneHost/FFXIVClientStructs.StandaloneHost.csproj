@@ -1,10 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
+        <OutputType>Library</OutputType>
         <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PlatformTarget>x64</PlatformTarget>
+        <Platforms>x64</Platforms>
+        <BootstrapProject>$(MSBuildProjectDirectory)\..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj</BootstrapProject>
+        <BootstrapPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)bootstrap\$(Configuration)\'))</BootstrapPublishDirectory>
     </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference
+            Include="..\FFXIVClientStructs.StandaloneHost.Bootstrap\FFXIVClientStructs.StandaloneHost.Bootstrap.csproj"
+            ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\FFXIVClientStructs\FFXIVClientStructs\FFXIVClientStructs.csproj"/>
+        <None Include="buildTransitive\FFXIVClientStructs.StandaloneHost.props" Pack="true" PackagePath="buildTransitive"/>
+    </ItemGroup>
+
+    <Target Name="PublishBootstrap" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+        <MSBuild
+            Projects="$(BootstrapProject)"
+            Targets="Publish"
+            BuildInParallel="false"
+            Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishDir=$(BootstrapPublishDirectory)"/>
+
+        <ItemGroup>
+            <EmbeddedResource Include="$(BootstrapPublishDirectory)FFXIVClientStructs.StandaloneHost.Bootstrap.dll">
+                <LogicalName>FFXIVClientStructs.StandaloneHost.Bootstrap.dll</LogicalName>
+            </EmbeddedResource>
+        </ItemGroup>
+    </Target>
 
 </Project>

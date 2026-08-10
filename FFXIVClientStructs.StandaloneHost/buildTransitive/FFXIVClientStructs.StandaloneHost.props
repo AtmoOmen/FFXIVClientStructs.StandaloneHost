@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    </PropertyGroup>
+</Project>

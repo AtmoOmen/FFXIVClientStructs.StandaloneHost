@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="FFXIVClientStructs.StandaloneHost/FFXIVClientStructs.StandaloneHost.csproj" />
+    <Project Path="FFXIVClientStructs.StandaloneHost.Bootstrap/FFXIVClientStructs.StandaloneHost.Bootstrap.csproj"/>
+    <Project Path="FFXIVClientStructs.StandaloneHost/FFXIVClientStructs.StandaloneHost.csproj"/>
 </Solution>

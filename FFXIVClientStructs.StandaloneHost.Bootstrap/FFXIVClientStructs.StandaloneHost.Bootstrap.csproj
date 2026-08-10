@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>14</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <SelfContained>true</SelfContained>
+        <PublishAot>true</PublishAot>
+        <NativeLib>Shared</NativeLib>
+        <StripSymbols>true</StripSymbols>
+    </PropertyGroup>
+
+</Project>
