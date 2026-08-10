@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.Win32.SafeHandles;
 
 namespace FFXIVClientStructs.StandaloneHost;
@@ -10,11 +9,11 @@ internal static class ManagedEntryRunner
         BootstrapRequest request
     )
     {
-        var context = new EntryLoadContext(request.EntryAssemblyPath);
+        var       context       = new EntryLoadContext(request.EntryAssemblyPath);
         using var callerProcess = new EventWaitHandle(false, EventResetMode.ManualReset);
-        callerProcess.SafeWaitHandle = new SafeWaitHandle(request.CallerProcessHandle, ownsHandle: false);
+        callerProcess.SafeWaitHandle = new SafeWaitHandle(request.CallerProcessHandle, false);
         using var monitorCancellation = new CancellationTokenSource();
-        var monitor = MonitorCallerProcess(callerProcess, context, monitorCancellation.Token);
+        var       monitor             = MonitorCallerProcess(callerProcess, context, monitorCancellation.Token);
 
         try
         {
@@ -29,6 +28,7 @@ internal static class ManagedEntryRunner
             var result = entryPoint.Invoke(null, parameters);
 
             int exitCode;
+
             if (result is Task<int> resultTask)
             {
                 resultTask.Wait();
@@ -40,9 +40,9 @@ internal static class ManagedEntryRunner
                 exitCode = 0;
             }
             else
-            {
-                exitCode = result is int value ? value : 0;
-            }
+                exitCode = result is int value ?
+                               value :
+                               0;
 
             monitor.Wait();
             return exitCode;
@@ -82,7 +82,7 @@ internal static class ManagedEntryRunner
             static (state, _) => ((TaskCompletionSource<bool>)state!).TrySetResult(true),
             completion,
             Timeout.Infinite,
-            executeOnlyOnce: true
+            true
         );
         using var cancellationRegistration = cancellationToken.Register
         (

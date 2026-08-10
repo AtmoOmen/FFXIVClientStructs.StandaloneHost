@@ -1,14 +1,14 @@
 using System.Globalization;
 
-namespace FFXIVClientStructs.StandaloneHost;
+namespace FFXIVClientStructs.StandaloneHost.Services;
 
 public class MemoryPatch : IDisposable
 {
     public MemoryPatch
     (
-        nint                           address,
-        IReadOnlyCollection<byte?>     bytes,
-        bool                           startEnabled = false
+        nint                       address,
+        IReadOnlyCollection<byte?> bytes,
+        bool                       startEnabled = false
     )
     {
         ArgumentNullException.ThrowIfNull(bytes);
@@ -46,14 +46,12 @@ public class MemoryPatch : IDisposable
 
     public MemoryPatch
     (
-        string                         signature,
-        IReadOnlyCollection<byte?>     bytes,
-        nint                           offset       = 0,
-        bool                           startEnabled = false
-    ) : this(Scan(signature, offset), bytes, startEnabled)
-    {
+        string                     signature,
+        IReadOnlyCollection<byte?> bytes,
+        nint                       offset       = 0,
+        bool                       startEnabled = false
+    ) : this(Scan(signature, offset), bytes, startEnabled) =>
         Signature = signature;
-    }
 
     public MemoryPatch
     (
@@ -127,7 +125,9 @@ public class MemoryPatch : IDisposable
     (
         string signature,
         nint   offset
-    ) => StandaloneHost.SigScanner.TryScanModule(signature, out var address) ? address + offset : 0;
+    ) => StandaloneHost.SigScanner.TryScanModule(signature, out var address) ?
+             address + offset :
+             0;
 
     private static byte?[] ParseBytes
     (
@@ -141,6 +141,7 @@ public class MemoryPatch : IDisposable
             throw new ArgumentException("Patch bytes must contain complete byte pairs.", nameof(bytes));
 
         var result = new byte?[compactBytes.Length / 2];
+
         for (var index = 0; index < result.Length; index++)
         {
             var token = compactBytes.AsSpan(index * 2, 2);

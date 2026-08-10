@@ -10,17 +10,17 @@ public static class TargetBootstrap
         nint requestAddress
     )
     {
-        BootstrapRequest? request = null;
-        TextWriter?       output = null;
+        BootstrapRequest? request        = null;
+        TextWriter?       output         = null;
         TextWriter?       standardOutput = null;
-        TextWriter?       standardError = null;
+        TextWriter?       standardError  = null;
 
         try
         {
             request = BootstrapRequest.Read(requestAddress);
             output = new StreamWriter(request.OutputPath, false)
             {
-                AutoFlush = true,
+                AutoFlush = true
             };
             standardOutput = Console.Out;
             standardError  = Console.Error;

@@ -66,8 +66,6 @@ internal static class MemoryAccessor
     (
         nint address,
         T    value
-    ) where T : unmanaged
-    {
+    ) where T : unmanaged =>
         WriteBytes(address, new ReadOnlySpan<byte>(&value, sizeof(T)));
-    }
 }

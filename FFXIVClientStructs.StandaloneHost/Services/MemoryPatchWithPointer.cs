@@ -1,20 +1,18 @@
-namespace FFXIVClientStructs.StandaloneHost;
+namespace FFXIVClientStructs.StandaloneHost.Services;
 
 public sealed class MemoryPatchWithPointer<T> : MemoryPatch
     where T : unmanaged
 {
-    private bool isPatched;
-
     public MemoryPatchWithPointer
     (
         nint                       address,
         IReadOnlyCollection<byte?> bytes,
         nint                       pointerOffset = 0,
         bool                       startEnabled  = false
-    ) : base(address, bytes, startEnabled)
-    {
-        PointerAddress = address == 0 ? 0 : address + pointerOffset;
-    }
+    ) : base(address, bytes, startEnabled) =>
+        PointerAddress = address == 0 ?
+                             0 :
+                             address + pointerOffset;
 
     public MemoryPatchWithPointer
     (
@@ -22,10 +20,10 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
         string bytes,
         nint   pointerOffset = 0,
         bool   startEnabled  = false
-    ) : base(address, bytes, startEnabled)
-    {
-        PointerAddress = address == 0 ? 0 : address + pointerOffset;
-    }
+    ) : base(address, bytes, startEnabled) =>
+        PointerAddress = address == 0 ?
+                             0 :
+                             address + pointerOffset;
 
     public MemoryPatchWithPointer
     (
@@ -34,10 +32,10 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
         nint                       scanOffset    = 0,
         nint                       pointerOffset = 0,
         bool                       startEnabled  = false
-    ) : base(signature, bytes, scanOffset, startEnabled)
-    {
-        PointerAddress = IsValid ? Address + pointerOffset : 0;
-    }
+    ) : base(signature, bytes, scanOffset, startEnabled) =>
+        PointerAddress = IsValid ?
+                             Address + pointerOffset :
+                             0;
 
     public MemoryPatchWithPointer
     (
@@ -46,10 +44,10 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
         nint   scanOffset    = 0,
         nint   pointerOffset = 0,
         bool   startEnabled  = false
-    ) : base(signature, bytes, scanOffset, startEnabled)
-    {
-        PointerAddress = IsValid ? Address + pointerOffset : 0;
-    }
+    ) : base(signature, bytes, scanOffset, startEnabled) =>
+        PointerAddress = IsValid ?
+                             Address + pointerOffset :
+                             0;
 
     public nint PointerAddress { get; }
 
@@ -57,7 +55,7 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
 
     public T CurrentValue { get; private set; }
 
-    public bool IsPatched => isPatched;
+    public bool IsPatched { get; private set; }
 
     public void Set
     (
@@ -68,10 +66,10 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
         if (PointerAddress == 0)
             return;
 
-        if (!isPatched)
+        if (!IsPatched)
         {
             OriginalValue = MemoryAccessor.Read<T>(PointerAddress);
-            isPatched     = true;
+            IsPatched     = true;
         }
 
         MemoryAccessor.Write(PointerAddress, value);
@@ -80,12 +78,12 @@ public sealed class MemoryPatchWithPointer<T> : MemoryPatch
 
     public void Reset()
     {
-        if (IsDisposed || !isPatched)
+        if (IsDisposed || !IsPatched)
             return;
 
         MemoryAccessor.Write(PointerAddress, OriginalValue);
         CurrentValue = OriginalValue;
-        isPatched     = false;
+        IsPatched    = false;
     }
 
     public override void Dispose()

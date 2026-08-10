@@ -2,9 +2,18 @@ using System.Diagnostics.CodeAnalysis;
 using Reloaded.Hooks;
 using Reloaded.Hooks.Definitions;
 
-namespace FFXIVClientStructs.StandaloneHost;
+namespace FFXIVClientStructs.StandaloneHost.Services;
 
-public sealed class Hook<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicNestedTypes)] T> : IDisposable
+public sealed class Hook<
+    [DynamicallyAccessedMembers
+    (
+        DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
+        DynamicallyAccessedMemberTypes.PublicMethods                  |
+        DynamicallyAccessedMemberTypes.NonPublicMethods               |
+        DynamicallyAccessedMemberTypes.PublicFields                   |
+        DynamicallyAccessedMemberTypes.PublicNestedTypes
+    )]
+    T> : IDisposable
     where T : Delegate
 {
     private readonly IHook<T> implementation;
@@ -37,10 +46,8 @@ public sealed class Hook<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTy
         string signature,
         T      detour,
         bool   startEnabled = false
-    ) : this(StandaloneHost.SigScanner.ScanText(signature), detour, startEnabled)
-    {
+    ) : this(StandaloneHost.SigScanner.ScanText(signature), detour, startEnabled) =>
         Signature = signature;
-    }
 
     public nint Address { get; }
 

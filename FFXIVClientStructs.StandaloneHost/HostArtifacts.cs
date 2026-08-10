@@ -52,18 +52,18 @@ internal sealed class HostArtifacts
         );
         var errorDirectory = Path.Combine(rootDirectory, "errors");
         Directory.CreateDirectory(errorDirectory);
-        var operationName = $"{Environment.ProcessId}-{targetProcess.Id}-{Guid.NewGuid():N}";
-        var operationDirectory = Path.Combine(rootDirectory, "operations", operationName);
-        var errorPath           = Path.Combine(errorDirectory, $"{operationName}.log");
-        var outputPath          = Path.Combine(errorDirectory, $"{operationName}.output");
+        var operationName      = $"{Environment.ProcessId}-{targetProcess.Id}-{Guid.NewGuid():N}";
+        var operationDirectory = Path.Combine(rootDirectory,  "operations", operationName);
+        var errorPath          = Path.Combine(errorDirectory, $"{operationName}.log");
+        var outputPath         = Path.Combine(errorDirectory, $"{operationName}.output");
 
         var bootstrapPath      = BootstrapExtractor.Extract(BootstrapExtractor.NATIVE_RESOURCE_NAME, operationDirectory);
         var loaderAssemblyPath = BootstrapExtractor.Extract(BootstrapExtractor.LOADER_RESOURCE_NAME, operationDirectory);
         var loaderAssemblyName = AssemblyName.GetAssemblyName(loaderAssemblyPath).Name ??
                                  throw new StandaloneHostException("The loader assembly does not expose a name.");
-        var runtimeConfigPath  = RuntimeConfigExtractor.Extract(operationDirectory);
-        var hostFXRPath        = HostFXRLocator.Find(targetProcess);
-        var arguments          = JsonSerializer.Serialize(Environment.GetCommandLineArgs()[1..]);
+        var runtimeConfigPath = RuntimeConfigExtractor.Extract(operationDirectory);
+        var hostFXRPath       = HostFXRLocator.Find(targetProcess);
+        var arguments         = JsonSerializer.Serialize(Environment.GetCommandLineArgs()[1..]);
         var request = BuildRequest
         (
             hostFXRPath,

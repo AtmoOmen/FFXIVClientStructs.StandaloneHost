@@ -60,9 +60,9 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool VirtualProtect
     (
-        nint                address,
-        nuint               size,
-        MemoryProtection    newProtection,
+        nint                 address,
+        nuint                size,
+        MemoryProtection     newProtection,
         out MemoryProtection oldProtection
     );
 
@@ -73,8 +73,8 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool FlushInstructionCache
     (
-        nint process,
-        nint address,
+        nint  process,
+        nint  address,
         nuint size
     );
 

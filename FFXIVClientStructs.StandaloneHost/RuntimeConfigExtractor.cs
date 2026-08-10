@@ -25,12 +25,13 @@ internal static class RuntimeConfigExtractor
     {
         var content = Encoding.UTF8.GetBytes(CONTENT);
         var hash    = Convert.ToHexString(SHA256.HashData(content));
-        var directory = destinationDirectory ?? Path.Combine
-                            (
-                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                "FFXIVClientStructs.StandaloneHost",
-                                hash
-                            );
+        var directory = destinationDirectory ??
+                        Path.Combine
+                        (
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "FFXIVClientStructs.StandaloneHost",
+                            hash
+                        );
         var path = Path.Combine(directory, "FFXIVClientStructs.StandaloneHost.runtimeconfig.json");
 
         Directory.CreateDirectory(directory);

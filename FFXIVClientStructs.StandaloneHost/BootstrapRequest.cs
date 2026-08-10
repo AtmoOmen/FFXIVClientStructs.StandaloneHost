@@ -17,13 +17,13 @@ internal sealed class BootstrapRequest
         nint     callerProcessHandle
     )
     {
-        HostFXRPath       = hostFXRPath;
-        RuntimeConfigPath = runtimeConfigPath;
-        HostAssemblyPath  = hostAssemblyPath;
-        EntryAssemblyPath = entryAssemblyPath;
-        Arguments         = arguments;
-        ErrorPath         = errorPath;
-        OutputPath        = outputPath;
+        HostFXRPath         = hostFXRPath;
+        RuntimeConfigPath   = runtimeConfigPath;
+        HostAssemblyPath    = hostAssemblyPath;
+        EntryAssemblyPath   = entryAssemblyPath;
+        Arguments           = arguments;
+        ErrorPath           = errorPath;
+        OutputPath          = outputPath;
         CallerProcessHandle = callerProcessHandle;
     }
 

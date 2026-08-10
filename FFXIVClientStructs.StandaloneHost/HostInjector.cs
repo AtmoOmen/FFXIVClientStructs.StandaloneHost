@@ -76,6 +76,7 @@ internal static class HostInjector
                 try
                 {
                     var freeLibrary = GetRemoteProcedureAddress(targetProcess, "kernel32.dll", "FreeLibrary");
+
                     for (var attempt = 0; attempt < 16; attempt++)
                     {
                         if (!TryFindModuleBase(targetProcess.Id, artifacts.BootstrapPath, out var loadedBootstrapBase))
@@ -167,8 +168,8 @@ internal static class HostInjector
 
     private static bool TryFindModuleBase
     (
-        int    processId,
-        string modulePathOrName,
+        int      processId,
+        string   modulePathOrName,
         out nint moduleBase
     )
     {

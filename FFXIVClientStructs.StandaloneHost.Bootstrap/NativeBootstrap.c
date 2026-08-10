@@ -6,11 +6,12 @@
 #include <wchar.h>
 
 typedef void* hostfxr_handle;
-typedef int32_t (__cdecl *hostfxr_initialize_fn)(const wchar_t*, const void*, hostfxr_handle*);
+typedef int32_t(__cdecl * hostfxr_initialize_fn)(const wchar_t*, const void*, hostfxr_handle*);
 typedef int32_t (__cdecl *hostfxr_get_runtime_delegate_fn)(hostfxr_handle, int32_t, void**);
 typedef int32_t (__cdecl *hostfxr_close_fn)(hostfxr_handle);
 typedef int32_t (__stdcall *load_assembly_bytes_fn)(const void*, size_t, const void*, size_t, void*, void*);
-typedef int32_t (__stdcall *get_function_pointer_fn)(const wchar_t*, const wchar_t*, const wchar_t*, void*, void*, void**);
+typedef int32_t (__stdcall *get_function_pointer_fn)(const wchar_t*, const wchar_t*, const wchar_t*, void*, void*,
+                                                     void**);
 typedef int32_t (__stdcall *managed_entry_fn)(void*);
 
 static HMODULE bootstrap_module;
@@ -77,7 +78,8 @@ static void* read_file(const wchar_t* path, size_t* length)
     }
 
     DWORD bytes_read;
-    if (!ReadFile(file, content, (DWORD)file_size.QuadPart, &bytes_read, NULL) || bytes_read != (DWORD)file_size.QuadPart)
+    if (!ReadFile(file, content, (DWORD)file_size.QuadPart, &bytes_read, NULL) || bytes_read != (DWORD)file_size.
+        QuadPart)
     {
         HeapFree(GetProcessHeap(), 0, content);
         CloseHandle(file);
@@ -157,7 +159,7 @@ static void schedule_bootstrap_cleanup(const wchar_t* operation_directory)
     }
 
     BOOL queued = QueueUserAPC((PAPCFUNC)Sleep, cleanup_thread, 50) != 0 &&
-                  QueueUserAPC((PAPCFUNC)DeleteFileW, cleanup_thread, (ULONG_PTR)paths) != 0;
+        QueueUserAPC((PAPCFUNC)DeleteFileW, cleanup_thread, (ULONG_PTR)paths) != 0;
     if (queued && operation_directory != NULL)
         queued = QueueUserAPC((PAPCFUNC)RemoveDirectoryW, cleanup_thread, (ULONG_PTR)directory) != 0;
     if (queued && root_length > 0)
@@ -165,7 +167,7 @@ static void schedule_bootstrap_cleanup(const wchar_t* operation_directory)
     if (queued)
         queued = QueueUserAPC((PAPCFUNC)GlobalFree, cleanup_thread, (ULONG_PTR)paths) != 0;
 
-    if (!queued || ResumeThread(cleanup_thread) == (DWORD)-1)
+    if (!queued || ResumeThread(cleanup_thread) == DWORD - 1)
     {
         TerminateThread(cleanup_thread, 0);
         CloseHandle(cleanup_thread);
@@ -261,7 +263,8 @@ __declspec(dllexport) DWORD __stdcall FFXIVClientStructsStandaloneHostBootstrap(
         goto complete;
     }
 
-    hostfxr_initialize_fn initialize = (hostfxr_initialize_fn)GetProcAddress(hostfxr, "hostfxr_initialize_for_runtime_config");
+    hostfxr_initialize_fn initialize = (hostfxr_initialize_fn)GetProcAddress(
+        hostfxr, "hostfxr_initialize_for_runtime_config");
     hostfxr_get_runtime_delegate_fn get_runtime_delegate =
         (hostfxr_get_runtime_delegate_fn)GetProcAddress(hostfxr, "hostfxr_get_runtime_delegate");
     close_host = (hostfxr_close_fn)GetProcAddress(hostfxr, "hostfxr_close");
@@ -307,7 +310,7 @@ __declspec(dllexport) DWORD __stdcall FFXIVClientStructsStandaloneHostBootstrap(
         goto complete;
     }
 
-    load_assembly_bytes_fn load_assembly_bytes = (load_assembly_bytes_fn)load_assembly_bytes_address;
+    const load_assembly_bytes_fn load_assembly_bytes = load_assembly_bytes_address;
     int32_t load_result = load_assembly_bytes(loader_content, loader_length, NULL, 0, NULL, NULL);
     HeapFree(GetProcessHeap(), 0, loader_content);
     if (load_result != 0)
@@ -317,7 +320,7 @@ __declspec(dllexport) DWORD __stdcall FFXIVClientStructsStandaloneHostBootstrap(
         goto complete;
     }
 
-    get_function_pointer_fn get_function_pointer = (get_function_pointer_fn)get_function_pointer_address;
+    const get_function_pointer_fn get_function_pointer = get_function_pointer_address;
     void* entry_point = NULL;
     host_result = get_function_pointer
     (

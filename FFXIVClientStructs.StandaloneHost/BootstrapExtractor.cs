@@ -23,12 +23,13 @@ internal static class BootstrapExtractor
         var content     = memory.ToArray();
         var contentHash = SHA256.HashData(content);
         var hash        = Convert.ToHexString(contentHash);
-        var directory = destinationDirectory ?? Path.Combine
-                            (
-                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                "FFXIVClientStructs.StandaloneHost",
-                                hash
-                            );
+        var directory = destinationDirectory ??
+                        Path.Combine
+                        (
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "FFXIVClientStructs.StandaloneHost",
+                            hash
+                        );
         var path = Path.Combine(directory, resourceName);
 
         Directory.CreateDirectory(directory);

@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Iced.Intel;
 
-namespace FFXIVClientStructs.StandaloneHost;
+namespace FFXIVClientStructs.StandaloneHost.Services;
 
 public sealed class SigScanner
 {
@@ -71,8 +71,8 @@ public sealed class SigScanner
 
     public static nint Scan
     (
-        nint  baseAddress,
-        int   size,
+        nint   baseAddress,
+        int    size,
         string signature
     )
     {
@@ -88,10 +88,10 @@ public sealed class SigScanner
 
     public static bool TryScan
     (
-        nint       baseAddress,
-        int        size,
-        string     signature,
-        out nint   result
+        nint     baseAddress,
+        int      size,
+        string   signature,
+        out nint result
     )
     {
         try
@@ -212,7 +212,7 @@ public sealed class SigScanner
     )
     {
         var address = ScanText(signature) + offset;
-        var end     = TextSectionBase + TextSectionSize;
+        var end     = TextSectionBase     + TextSectionSize;
         if (address < TextSectionBase || address >= end)
             throw new KeyNotFoundException($"Signature {signature} resolved outside the .text section.");
 
@@ -222,6 +222,7 @@ public sealed class SigScanner
 
         var reader  = new ByteArrayCodeReader(bytes);
         var decoder = Decoder.Create(64, reader, (ulong)address, DecoderOptions.AMD);
+
         while (reader.CanReadByte)
         {
             var instruction = decoder.Decode();
@@ -277,6 +278,7 @@ public sealed class SigScanner
         for (var index = 0; index < needle.Length; index++)
         {
             var token = compactSignature.AsSpan(index * 2, 2);
+
             if (token is "??" or "**")
             {
                 mask[index] = true;
@@ -310,6 +312,7 @@ public sealed class SigScanner
         while (offset <= maxOffset)
         {
             var position = last;
+
             while (needle[position] == buffer[position + offset] || mask[position])
             {
                 if (position == 0)
@@ -332,6 +335,7 @@ public sealed class SigScanner
     {
         var last  = needle.Length - 1;
         var table = new int[256];
+
         if (last == 0)
         {
             Array.Fill(table, 1);
@@ -345,11 +349,16 @@ public sealed class SigScanner
         var difference = Math.Max(1, last - index);
         Array.Fill(table, difference);
 
-        for (index = last - difference; index < last; index++)
+        for (index = last               - difference; index < last; index++)
             table[needle[index]] = last - index;
 
         return table;
     }
 
-    private sealed record SignaturePattern(byte[] Needle, bool[] Mask, int[] BadShift);
+    private sealed record SignaturePattern
+    (
+        byte[] Needle,
+        bool[] Mask,
+        int[]  BadShift
+    );
 }

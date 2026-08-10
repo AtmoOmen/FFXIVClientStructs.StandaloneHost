@@ -7,13 +7,13 @@ namespace FFXIVClientStructs.StandaloneHost;
 internal sealed class EntryLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver resolver;
-    private readonly string entryAssemblyPath;
-    private          int    releaseRequested;
+    private readonly string                     entryAssemblyPath;
+    private          int                        releaseRequested;
 
     public EntryLoadContext
     (
         string entryAssemblyPath
-    ) : base($"FFXIVClientStructs.StandaloneHost.{Guid.NewGuid():N}", isCollectible: true)
+    ) : base($"FFXIVClientStructs.StandaloneHost.{Guid.NewGuid():N}", true)
     {
         this.entryAssemblyPath = entryAssemblyPath;
         resolver               = new AssemblyDependencyResolver(entryAssemblyPath);
@@ -25,8 +25,7 @@ internal sealed class EntryLoadContext : AssemblyLoadContext
     {
         Volatile.Write(ref releaseRequested, 1);
         var hostAssembly = Assemblies.FirstOrDefault
-        (
-            assembly => string.Equals(assembly.GetName().Name, "FFXIVClientStructs.StandaloneHost", StringComparison.Ordinal)
+        (assembly => string.Equals(assembly.GetName().Name, "FFXIVClientStructs.StandaloneHost", StringComparison.Ordinal)
         );
         var hostType = hostAssembly?.GetType("FFXIVClientStructs.StandaloneHost.StandaloneHost");
         var shutdown = hostType?.GetMethod("Shutdown", BindingFlags.Public | BindingFlags.Static);
@@ -49,9 +48,7 @@ internal sealed class EntryLoadContext : AssemblyLoadContext
         var assembly = LoadManagedAssembly(path);
         if (Volatile.Read(ref releaseRequested) != 0 &&
             string.Equals(assemblyName.Name, "FFXIVClientStructs.StandaloneHost", StringComparison.Ordinal))
-        {
             ReleaseResources();
-        }
 
         return assembly;
     }
@@ -72,8 +69,8 @@ internal sealed class EntryLoadContext : AssemblyLoadContext
         string path
     )
     {
-        using var assembly = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        var symbolsPath = Path.ChangeExtension(path, ".pdb");
+        using var assembly    = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        var       symbolsPath = Path.ChangeExtension(path, ".pdb");
         if (!File.Exists(symbolsPath))
             return LoadFromStream(assembly);
 

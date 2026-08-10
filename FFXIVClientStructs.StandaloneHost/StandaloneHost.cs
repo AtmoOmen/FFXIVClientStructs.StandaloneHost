@@ -1,20 +1,23 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using FFXIVClientStructs.Interop.Generated;
+using FFXIVClientStructs.StandaloneHost.Services;
 using InteropGenerator.Runtime;
 
 namespace FFXIVClientStructs.StandaloneHost;
 
 public static class StandaloneHost
 {
-    private static int initialized;
-    private static int shuttingDown;
+    private static int         initialized;
+    private static int         shuttingDown;
     private static SigScanner? sigScanner;
+
     private static readonly ConcurrentDictionary<IDisposable, byte> Resources = new(ReferenceEqualityComparer.Instance);
 
-    public static SigScanner SigScanner => sigScanner ?? throw new InvalidOperationException("StandaloneHost has not been initialized in the target process.");
+    public static SigScanner SigScanner =>
+        sigScanner ?? throw new InvalidOperationException("StandaloneHost has not been initialized in the target process.");
 
-    public static void Initialize
+    public static void Init
     (
         Process process
     )
@@ -42,7 +45,7 @@ public static class StandaloneHost
         Resolver.GetInstance.Resolve();
     }
 
-    public static void Shutdown()
+    public static void Uninit()
     {
         if (Interlocked.Exchange(ref shuttingDown, 1) != 0)
             return;
