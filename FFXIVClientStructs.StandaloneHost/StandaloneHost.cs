@@ -54,7 +54,7 @@ public static class StandaloneHost
         }
     }
 
-    public static TContract CreateModule<TContract, TModule>()
+    public static TContract CreateInstance<TContract, TModule>()
         where TContract : class
         where TModule : class, TContract
     {

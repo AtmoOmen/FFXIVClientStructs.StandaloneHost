@@ -16,7 +16,7 @@ internal static class Program
         StandaloneHost.Init(process);
         try
         {
-            using var module = StandaloneHost.CreateModule<IExampleModule, ExampleModule>();
+            using var module = StandaloneHost.CreateInstance<IExampleModule, ExampleModule>();
             var       result = module.Read();
 
             Console.WriteLine($"Instance ID: {result.InstanceID}");
